@@ -1,0 +1,1 @@
+palmc ./ proto/

@@ -3,7 +3,7 @@ from setuptools import setup
 def build_pb():
     import os
     print 'building protobuf modules...'
-    assert os.system("palmc ./ montage/proto/") == 0
+    assert os.system("palmc ./ montage/") == 0
 
 build_pb()
 

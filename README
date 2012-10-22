@@ -1,0 +1,15 @@
+install diesel 3
+	git clone git@github.com:jamwt/diesel
+	cd diesel && sudo python setup.py develop
+
+install montage and start the basic proxy
+	git clone git@github.com:bumptech/montage
+	cd montage && cabal install (hsenv recommended)
+	runhaskell examples/basic_proxy.hs
+
+install montage client
+	sudo python setup.py develop
+
+build the example protos and run example
+      	./examples/build_test_protos.sh
+	python examples/test_reference_get.py

@@ -225,23 +225,3 @@ def montage_pool(host, port, timeout=30, logger=default_logger, pool_size=5):
                                                 logger=logger),
                           lambda conn: conn.close(),
                           pool_size=pool_size)
-
-"""
-    # only one status, in a list, corresponding to master
-    # what would happen if this wasn't there?
-    def __get(self, bucket, key, req):
-        resp = self._do_request(bucket, key, req)
-
-        assert len(resp.status) == 1, \
-               'There should only be one status response'
-        assert len(resp.subs) == 0, \
-               'There should not be any subqueries'
-
-        status = resp.status[0]
-        if status == MISSING:
-            return None
-        elif status == EXISTS:
-            return resp.master
-        else:
-            raise RiakException('Error fetching from magicd (b=%s, k=%s)' % (bucket, key))
-"""

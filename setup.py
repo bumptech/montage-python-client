@@ -15,6 +15,7 @@ setup(name="montage",
       author_email="dev@bumptechnologies.com",
       packages=["montage"],
       install_requires=[
-        "palm"
+        "palm",
+        "diesel"
     ],
       )

@@ -31,7 +31,7 @@ A Basic Resolution
 
 The montage/examples/basic_proxy defines resolutions for three simple protocol-buffers: UserInfo, UserEvent, and UserName (view them in montage-python-client/examples/user.proto).
 
-To see a basic last write wins resolution in action, throw UserInfo data at montage, at the same bucket and key destination, and ask for it back::
+To see a basic last write wins resolution in action, throw UserInfo data at montage, at the same bucket and key destination, and query that bucket and key pair::
 
     from montage import MontageClient
     from user_palm import UserInfo
@@ -43,9 +43,9 @@ To see a basic last write wins resolution in action, throw UserInfo data at mont
     bucket = 'u-info'
     key = '1'
 
-    data_1 = UserInfo(uid=1)
+    data_1 = UserInfo(uid=4393)
     first = client.put(bucket, key, data_1.dumps())
-    data_2 = UserInfo(uid=2)
+    data_2 = UserInfo(uid=4920)
     second = client.put(bucket, key, data_2.dumps())
 
     resolved = client.get(bucket, key)
@@ -53,18 +53,16 @@ To see a basic last write wins resolution in action, throw UserInfo data at mont
 
 The type signatures of get and put::
 
-    # pseudo C-style
-    # where vclock is optional and obj has fields 'data', 'bucket', 'key', 'vclock'
-    obj put(string bucket, string key, bytestring data, bytestring vclock);
-
-    obj get(string bucket, string key);
-
     # Haskell-style
+    # where vclock is optional and obj has fields 'data', 'bucket', 'key', 'vclock'
+
     put :: String -> String -> ByteString -> Maybe ByteString -> Object
     put bucket key data vclock = obj
 
     get :: String -> String -> Object
     get bucket key = obj
+
+'put' returns the data stored in riak, which comes equipped with an assigned vclock (obj.vclock).
 
 The montage-python-client sends requests to montage over a zmq socket using diesel.  To execute the above code, wrap the above logic in a function that can be diesel quickstarted::
 
@@ -79,4 +77,53 @@ The montage-python-client sends requests to montage over a zmq socket using dies
 
     quickstart(resolve)
 
-(Add a diesel quickstop inside of your function, after your resolution logic, to tell diesel to close its connections when finished.)
+Delete
+===========
+
+To delete the data you just resolved (above)::
+
+    from montage import MontageClient
+
+    client = MontageClient('localhost', 7078)
+
+    bucket = 'u-info'
+    key = '1'
+    client.delete(bucket, key)
+
+Batches
+===========
+
+Montage supports batch commands, which means getting from many destinations, or putting data in many destinations.  The put many interface requires the building of a newMontageObject::
+
+    from montage import MontageClient
+    from user_palm import UserInfo, UserEvent
+
+    client = MontageClient('localhost', 7078)
+
+    bucket = 'u-info'
+    key = '2'
+    data = UserInfo(uid=3244)
+    mo_ui = client.newMontageObject(bucket, key, data.dumps())
+
+    bucket = 'u-event'
+    key = '1'
+    data = UserEvent(eid=1301)
+    mo_ue = client.newMontageObject(bucket, key, data.dumps())
+
+    what_was_put = client.put_many([mo_ui, mo_ue])
+
+Likewise, if you desire to get from many destination, you may do so by ordering your requests as (bucket, key) pairs in a list::
+
+    found = client.get_many([('u-info', '2'), ('u-event', '1')])
+
+    assert found[0].data == mo_ui.data
+    assert found[1].data == mo_ue.data
+
+    found = client.get_many([('u-info', '2'), ('u-whatever', '1')])
+
+    assert found[1] == None
+
+The response is a list the same length of the request: the (bucket, key) pairs are exactly replaced with either a value found or None.
+
+Reference Gets
+===========

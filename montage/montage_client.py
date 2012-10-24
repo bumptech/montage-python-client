@@ -91,7 +91,7 @@ class MontageClient(object):
             self.logger('DB', 'MANY_SIBLINGS_FETCH',
                         action='MONTAGE_GET',
                         bucket=result.bucket,
-                        key=resuilt.key,
+                        key=result.key,
                         duration=duration,
                         length=len(result.data),
                         num_siblings=result.fetch_resolutions)

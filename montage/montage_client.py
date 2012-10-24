@@ -9,10 +9,13 @@ from diesel.protocols.zeromq import DieselZMQSocket, zctx, zmq
 from montage_palm import *
 
 packet_to_id = {MontageGet: MONTAGE_GET,
+                MontageGetMany: MONTAGE_GET_MANY,
                 MontageGetReference: MONTAGE_GET_REFERENCE,
                 MontageGetResponse: MONTAGE_GET_RESPONSE,
-                MontagePut:MONTAGE_PUT,
+                MontagePut: MONTAGE_PUT,
+                MontagePutMany: MONTAGE_PUT_MANY,
                 MontagePutResponse: MONTAGE_PUT_RESPONSE,
+                MontagePutManyResponse: MONTAGE_PUT_MANY_RESPONSE,
                 MontageCommand: MONTAGE_COMMAND,
                 MontageCommandResponse: MONTAGE_COMMAND_RESPONSE,
                 MontageDelete: MONTAGE_DELETE,
@@ -57,6 +60,11 @@ class MontageClient(object):
         assert self._sock is not None, 'The socket has already been closed'
         return self._sock
 
+    def newMontageObject(self, bucket, key, data_):
+        obj = MontageObject(bucket=bucket, key=key)
+        obj.data = data_.dumps()
+        return obj
+
     def _monitor_get(self, start, result):
         duration = time.time() - start
         if duration > 1:
@@ -87,7 +95,7 @@ class MontageClient(object):
         req = MontageGet(bucket=bucket,key=key)
 
         start = time.time()
-        resp = self._do_request(bucket, key, req)
+        resp = self._do_request(req, bucket, key)
 
         assert len(resp.status) == 1, \
                'There should only be one status response'
@@ -117,16 +125,20 @@ class MontageClient(object):
         assert i == len(resp.subs), "incomplete status list"
         return out
 
-    # get_many :: [(bucket, key)] -> [MontageObject]
+    # get_many :: [(bucket, key)] -> [MontageObject
     def get_many(self, buckets_keys):
         req = MontageGetMany()
-        req.gets.set(buckets_keys)
+        gets_ = []
+        for (b, k) in buckets_keys:
+            gets_.append(MontageGet(bucket=b, key=k))
+        req.gets.set(gets_)
+
+        start = time.time()
+        resp = self._do_request(req)
 
         assert len(resp.status) == len(buckets_keys), \
             'You should receive as many status responses as you requested'
 
-        start = time.time()
-        resp = self._do_request(bucket, key, req)
         return self._get_subs(start, resp)
 
     # get_by :: bucket -> key -> [target_bucket] -> [MontageObject]
@@ -146,20 +158,16 @@ class MontageClient(object):
     # delete :: bucket -> key -> ()
     def delete(self, bucket, key):
         req = MontageDelete(bucket=bucket, key=key)
-        resp = self._do_request(bucket, key, req)
+        resp = self._do_request(req, bucket, key)
 
         assert isinstance(resp, MontageDeleteResponse), \
                'Delete should always get DeleteResponse back'
 
     # put :: bucket -> key -> data -> (vclock) -> obj
-    def put(self, bucket, key, data, vclock=None):
-        obj = MontageObject(bucket=bucket, key=key)
-        obj.data = data # can't be part of the constructor because of a palm bug
-        if vclock:
-            obj.vclock = vclock
-        req = MontagePut(object=obj)
+    def put(self, mo):
+        req = MontagePut(object=mo)
 
-        resp = self._do_request(bucket, key, req)
+        resp = self._do_request(req)
 
         if resp.modified:
             return resp.object
@@ -167,27 +175,19 @@ class MontageClient(object):
             return None
 
     # put_many :: bucket -> key -> [data] -> (vclock) -> [obj]
-    def put_many(self, bucket, key, datas, vclock=None):
-        obj = MontageObject(bucket=bucket, key=key)
-        objs = []
-        for data in datas:
-            obj_ = obj.copy()
-            obj_.data = data
-            if vclock:
-                obj_.vclock = vclock
-            objs.append(obj_)
+    def put_many(self, mos):
         req = MontagePutMany()
-        req.objects.set(objs)
-        resp = self._do_request(bucket, key, req)
-        return resp.object
+        req.objects.set(mos)
+        resp = self._do_request(req)
+        return [ r.object for r in resp.objects ]
 
     def command(self, command, argument):
         req = MontageCommand(command=command,
                              argument=argument)
-        resp = self._do_request(None, None, req)
+        resp = self._do_request(req)
         return resp
 
-    def _do_request(self, bucket, key, req):
+    def _do_request(self, req, bucket=None, key=None):
         try:
             return self.recv(self.send(req))
         except MontageRequestTimeout, e:

@@ -150,13 +150,13 @@ If we've defined a way to transform a datatype to a bytestring key (as we've don
 
 Then to make the reference get requests::
 
-    (referenceFound, valuesFound) = client.get_by_('u-info', str(1) ['u-event', 'u-name'])
+    (referenceFound, valuesFound) = client.get_by_('u-info', str(1), ['u-event', 'u-name'])
 
     assert UserInfo(referenceFound.data) == reference
-    assert len(values) == 2
-    assert (values[0] is not None) and (values[1] is not None)
-    assert UserEvent(values[0].data) == target1data
-    assert UserName(values[1].data) == target2data
+    assert len(valuesFound) == 2
+    assert (valuesFound[0] is not None) and (valuesFound[1] is not None)
+    assert UserEvent(valuesFound[0].data) == target1data
+    assert UserName(valuesFound[1].data) == target2data
 
 The values returned by a reference get request will be ordered to match the buckets given.  If the reference get failed to return one of the values, it will be None in the valuesFound list.
 

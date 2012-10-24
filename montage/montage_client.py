@@ -72,8 +72,7 @@ class MontageClient(object):
 
     def _monitor_get(self, start, result):
         duration = time.time() - start
-        #if duration > 1:
-        if True:
+        if duration > 1:
             self.logger('DB', 'SLOW_FETCH',
                         action='MONTAGE_GET',
                         bucket=result.bucket,

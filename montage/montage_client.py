@@ -1,6 +1,7 @@
 import time
 import uuid
 import sys
+import simplejson
 
 from diesel import first
 from diesel.util.pool import ConnectionPool
@@ -60,7 +61,7 @@ class MontageClient(object):
         assert self._sock is not None, 'The socket has already been closed'
         return self._sock
 
-    # for put_many
+    # for flexibility in put_many
     def newMontageObject(self, bucket, key, data, vclock=None):
         obj = MontageObject(bucket=bucket,
                             key=key)
@@ -71,25 +72,26 @@ class MontageClient(object):
 
     def _monitor_get(self, start, result):
         duration = time.time() - start
-        if duration > 1:
+        #if duration > 1:
+        if True:
             self.logger('DB', 'SLOW_FETCH',
                         action='MONTAGE_GET',
-                        bucket=bucket,
-                        key=key,
+                        bucket=result.bucket,
+                        key=result.key,
                         duration=duration,
                         length=len(result.data) if result else 0)
         if result and len(result.data) > 2097152: # two megabytes
             self.logger('DB', 'BIG_FETCH',
                         action='MONTAGE_GET',
-                        bucket=bucket,
-                        key=key,
+                        bucket=result.bucket,
+                        key=result.key,
                         duration=duration,
                         length=len(result.data))
         if result and result.fetch_resolutions__exists and result.fetch_resolutions > 10:
             self.logger('DB', 'MANY_SIBLINGS_FETCH',
                         action='MONTAGE_GET',
-                        bucket=bucket,
-                        key=key,
+                        bucket=result.bucket,
+                        key=resuilt.key,
                         duration=duration,
                         length=len(result.data),
                         num_siblings=result.fetch_resolutions)

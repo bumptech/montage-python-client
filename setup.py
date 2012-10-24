@@ -16,7 +16,7 @@ setup(name="montage",
       packages=["montage"],
       install_requires=[
         "palm",
-        "diesel"
+        "diesel",
         "simplejson",
     ],
       )

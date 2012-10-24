@@ -8,13 +8,13 @@ def main():
     cl = MontageClient('localhost', 7078)
 
     refdata = UserInfo(uid=2)
-    ref = cl.put(cl.newMontageObject('u-info', str(1), refdata))
+    ref = cl.put('u-info', str(1), refdata.dumps())
 
     target1data = UserEvent(eid=3)
-    target1 = cl.put(cl.newMontageObject('u-event', str(2), target1data))
+    target1 = cl.put('u-event', str(2), target1data.dumps())
 
     target2data = UserName(name="montage")
-    target2 = cl.put(cl.newMontageObject('u-name', str(2), target2data))
+    target2 = cl.put('u-name', str(2), target2data.dumps())
 
     (refObj, values) = cl.get_by_('u-info', str(1), ['u-event', 'u-name'])
     assert UserInfo(refObj.data) == refdata, "reference key found did not match"

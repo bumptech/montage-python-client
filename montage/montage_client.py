@@ -60,9 +60,13 @@ class MontageClient(object):
         assert self._sock is not None, 'The socket has already been closed'
         return self._sock
 
-    def newMontageObject(self, bucket, key, data_):
-        obj = MontageObject(bucket=bucket, key=key)
-        obj.data = data_.dumps()
+    # for put_many
+    def newMontageObject(self, bucket, key, data, vclock=None):
+        obj = MontageObject(bucket=bucket,
+                            key=key)
+        obj.data = data
+        if vclock:
+            obj.vclock = vclock
         return obj
 
     def _monitor_get(self, start, result):
@@ -164,9 +168,11 @@ class MontageClient(object):
                'Delete should always get DeleteResponse back'
 
     # put :: bucket -> key -> data -> (vclock) -> obj
-    def put(self, mo):
-        req = MontagePut(object=mo)
-
+    def put(self, bucket, key, data, vclock=None):
+        req = MontagePut(object=self.newMontageObject(bucket=bucket,
+                                                      key=key,
+                                                      data=data,
+                                                      vclock=vclock))
         resp = self._do_request(req)
 
         if resp.modified:
@@ -174,7 +180,7 @@ class MontageClient(object):
         else:
             return None
 
-    # put_many :: bucket -> key -> [data] -> (vclock) -> [obj]
+    # put_many :: [obj] -> [obj]
     def put_many(self, mos):
         req = MontagePutMany()
         req.objects.set(mos)

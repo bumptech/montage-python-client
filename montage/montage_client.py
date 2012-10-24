@@ -152,7 +152,7 @@ class MontageClient(object):
         req.target_buckets.set(targets)
 
         start = time.time()
-        resp = self._do_request(bucket, key, req)
+        resp = self._do_request(req, bucket, key)
         return (resp.master, self._get_subs(start, resp))
 
     # delete :: bucket -> key -> ()

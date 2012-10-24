@@ -7,20 +7,20 @@ from diesel import first
 from diesel.util.pool import ConnectionPool
 from diesel.protocols.zeromq import DieselZMQSocket, zctx, zmq
 
-from montage_palm import *
+import montage_palm as proto
 
-packet_to_id = {MontageGet: MONTAGE_GET,
-                MontageGetMany: MONTAGE_GET_MANY,
-                MontageGetReference: MONTAGE_GET_REFERENCE,
-                MontageGetResponse: MONTAGE_GET_RESPONSE,
-                MontagePut: MONTAGE_PUT,
-                MontagePutMany: MONTAGE_PUT_MANY,
-                MontagePutResponse: MONTAGE_PUT_RESPONSE,
-                MontagePutManyResponse: MONTAGE_PUT_MANY_RESPONSE,
-                MontageCommand: MONTAGE_COMMAND,
-                MontageCommandResponse: MONTAGE_COMMAND_RESPONSE,
-                MontageDelete: MONTAGE_DELETE,
-                MontageDeleteResponse: MONTAGE_DELETE_RESPONSE,
+packet_to_id = {proto.MontageGet: proto.MONTAGE_GET,
+                proto.MontageGetMany: proto.MONTAGE_GET_MANY,
+                proto.MontageGetReference: proto.MONTAGE_GET_REFERENCE,
+                proto.MontageGetResponse: proto.MONTAGE_GET_RESPONSE,
+                proto.MontagePut: proto.MONTAGE_PUT,
+                proto.MontagePutMany: proto.MONTAGE_PUT_MANY,
+                proto.MontagePutResponse: proto.MONTAGE_PUT_RESPONSE,
+                proto.MontagePutManyResponse: proto.MONTAGE_PUT_MANY_RESPONSE,
+                proto.MontageCommand: proto.MONTAGE_COMMAND,
+                proto.MontageCommandResponse: proto.MONTAGE_COMMAND_RESPONSE,
+                proto.MontageDelete: proto.MONTAGE_DELETE,
+                proto.MontageDeleteResponse: proto.MONTAGE_DELETE_RESPONSE,
                 }
 id_to_packet = dict((v, k) for k, v in packet_to_id.iteritems())
 
@@ -63,7 +63,7 @@ class MontageClient(object):
 
     # for flexibility in put_many
     def newMontageObject(self, bucket, key, data, vclock=None):
-        obj = MontageObject(bucket=bucket,
+        obj = proto.MontageObject(bucket=bucket,
                             key=key)
         obj.data = data
         if vclock:
@@ -98,7 +98,7 @@ class MontageClient(object):
 
     # get :: bucket -> key -> MontageObject
     def get(self, bucket, key):
-        req = MontageGet(bucket=bucket,key=key)
+        req = proto.MontageGet(bucket=bucket,key=key)
 
         start = time.time()
         resp = self._do_request(req, bucket, key)
@@ -109,9 +109,9 @@ class MontageClient(object):
                'There should not be any subqueries'
 
         status = resp.status[0]
-        if status == MISSING:
+        if status == proto.MISSING:
             return None
-        if status == EXISTS:
+        if status == proto.EXISTS:
             self._monitor_get(start, resp.master)
             return resp.master
         else:
@@ -121,9 +121,9 @@ class MontageClient(object):
         out = []
         i = 0
         for status in resp.status:
-            if status == MISSING:
+            if status == proto.MISSING:
                 out.append(None)
-            if status == EXISTS:
+            if status == proto.EXISTS:
                 sub = resp.subs[i]
                 self._monitor_get(start, sub)
                 out.append(sub)
@@ -133,10 +133,10 @@ class MontageClient(object):
 
     # get_many :: [(bucket, key)] -> [MontageObject
     def get_many(self, buckets_keys):
-        req = MontageGetMany()
+        req = proto.MontageGetMany()
         gets_ = []
         for (b, k) in buckets_keys:
-            gets_.append(MontageGet(bucket=b, key=k))
+            gets_.append(proto.MontageGet(bucket=b, key=k))
         req.gets.set(gets_)
 
         start = time.time()
@@ -154,7 +154,7 @@ class MontageClient(object):
     # returns ref key (as MontageObject) along with values
     # get_by_ :: bucket -> key -> [target_bucket] -> (MontageObject, [MontageObject])
     def get_by_(self, bucket, key, targets):
-        req = MontageGetReference(bucket=bucket, key=key)
+        req = proto.MontageGetReference(bucket=bucket, key=key)
         req.target_buckets.set(targets)
 
         start = time.time()
@@ -163,15 +163,15 @@ class MontageClient(object):
 
     # delete :: bucket -> key -> ()
     def delete(self, bucket, key):
-        req = MontageDelete(bucket=bucket, key=key)
+        req = proto.MontageDelete(bucket=bucket, key=key)
         resp = self._do_request(req, bucket, key)
 
-        assert isinstance(resp, MontageDeleteResponse), \
+        assert isinstance(resp, proto.MontageDeleteResponse), \
                'Delete should always get DeleteResponse back'
 
     # put :: bucket -> key -> data -> (vclock) -> obj
     def put(self, bucket, key, data, vclock=None):
-        req = MontagePut(object=self.newMontageObject(bucket=bucket,
+        req = proto.MontagePut(object=self.newMontageObject(bucket=bucket,
                                                       key=key,
                                                       data=data,
                                                       vclock=vclock))
@@ -184,13 +184,13 @@ class MontageClient(object):
 
     # put_many :: [obj] -> [obj]
     def put_many(self, mos):
-        req = MontagePutMany()
+        req = proto.MontagePutMany()
         req.objects.set(mos)
         resp = self._do_request(req)
         return [ r.object for r in resp.objects ]
 
     def command(self, command, argument):
-        req = MontageCommand(command=command,
+        req = proto.MontageCommand(command=command,
                              argument=argument)
         resp = self._do_request(req)
         return resp
@@ -205,7 +205,7 @@ class MontageClient(object):
 
     def send(self, req):
         id = uuid.uuid4()
-        out_pb = MontageEnvelope(mtype=packet_to_id[type(req)],
+        out_pb = proto.MontageEnvelope(mtype=packet_to_id[type(req)],
                                msg=req.dumps(),
                                msgid=id.bytes)
         self.sock.send(out_pb.dumps())
@@ -217,12 +217,12 @@ class MontageClient(object):
             err = "Timed out after %.2f secs waiting for zmq frame"
             raise MontageRequestTimeout(err % self.timeout)
 
-        env = MontageEnvelope(frame.bytes)
+        env = proto.MontageEnvelope(frame.bytes)
         if matchid:
             assert env.msgid == matchid.bytes, "request/response id pairs did not match!"
 
-        if env.mtype == MONTAGE_ERROR:
-            raise RiakException(MontageError(env.msg).error)
+        if env.mtype == proto.MONTAGE_ERROR:
+            raise RiakException(proto.MontageError(env.msg).error)
 
         return id_to_packet[env.mtype](env.msg)
 

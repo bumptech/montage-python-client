@@ -127,3 +127,37 @@ The response is a list the same length of the request: the (bucket, key) pairs a
 
 Reference Gets
 ===========
+
+A reference get request is two chained get requests, where the first lookup produces a value that is used as the key for the second lookup.
+
+If we've defined a way to transform a datatype to a bytestring key (as we've done for UserInfo in basic_proxy), we first deposit data that can be chained::
+
+    # basic_proxy defines a transformation from UserInfo's uid -> key
+
+    from montage import MontageClient
+    from user_palm import UserInfo, UserEvent
+
+    client = MontageClient('localhost', 7078)
+
+    refdata = UserInfo(uid=2) # key for targets
+    reference = cl.put('u-info', str(1), refdata.dumps())
+
+    target1data = UserEvent(eid=3)
+    target1 = client.put('u-event', str(2), target1data.dumps())
+
+    target2data = UserName(name="montage")
+    target2 = client.put('u-name', str(2), target2data.dumps())
+
+Then to make the reference get requests::
+
+    (referenceFound, valuesFound) = client.get_by_('u-info', str(1) ['u-event', 'u-name'])
+
+    assert UserInfo(referenceFound.data) == reference
+    assert len(values) == 2
+    assert (values[0] is not None) and (values[1] is not None)
+    assert UserEvent(values[0].data) == target1data
+    assert UserName(values[1].data) == target2data
+
+The values returned by a reference get request will be ordered to match the buckets given.  If the reference get failed to return one of the values, it will be None in the valuesFound list.
+
+There is also a client.get_by method which only returns valuesFound in the case that you don't care about the intermediate (referenceFound) lookup object.  This object, though, can be useful if you need to do another lookup conditionally on referenceFound.

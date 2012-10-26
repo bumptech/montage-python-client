@@ -7,7 +7,7 @@ from user_palm import UserInfo
 def test_many(cl, bucket):
     data = UserInfo(uid=1)
 
-    mos = [ cl.newMontageObject(bucket, str(i), data.dumps()) for i in xrange(0,2) ]
+    mos = [ cl.new_montage_object(bucket, str(i), data.dumps()) for i in xrange(0,2) ]
     ref = cl.put_many(mos)
     found = cl.get_many([(bucket, str(i)) for i in xrange(0,2) ])
 

@@ -44,7 +44,6 @@ class MontageRequestTimeout(Exception):
         return "%s (bucket=%r)" % (exception_msg, bucket)
 
 class MontageClient(object):
-    # __init__ :: string -> int -> (int) -> (f(start, result)) -> client
     def __init__(self, host, port, timeout=30, logger=default_logger):
         self._sock = DieselZMQSocket(zctx.socket(zmq.REQ), connect="tcp://%s:%d" % (host, port))
         self.timeout = timeout
@@ -61,10 +60,8 @@ class MontageClient(object):
         assert self._sock is not None, 'The socket has already been closed'
         return self._sock
 
-    # for flexibility in put_many
-    def newMontageObject(self, bucket, key, data, vclock=None):
-        obj = proto.MontageObject(bucket=bucket,
-                            key=key)
+    def new_montage_object(self, bucket, key, data, vclock=None):
+        obj = proto.MontageObject(bucket=bucket, key=key)
         obj.data = data
         if vclock:
             obj.vclock = vclock
@@ -95,7 +92,6 @@ class MontageClient(object):
                         length=len(result.data),
                         num_siblings=result.fetch_resolutions)
 
-    # get :: bucket -> key -> MontageObject
     def get(self, bucket, key):
         req = proto.MontageGet(bucket=bucket,key=key)
 
@@ -130,13 +126,10 @@ class MontageClient(object):
         assert i == len(resp.subs), "incomplete status list"
         return out
 
-    # get_many :: [(bucket, key)] -> [MontageObject
     def get_many(self, buckets_keys):
         req = proto.MontageGetMany()
-        gets_ = []
         for (b, k) in buckets_keys:
-            gets_.append(proto.MontageGet(bucket=b, key=k))
-        req.gets.set(gets_)
+            req.gets.append(proto.MontageGet(bucket=b, key=k))
 
         start = time.time()
         resp = self._do_request(req)
@@ -146,13 +139,7 @@ class MontageClient(object):
 
         return self._get_subs(start, resp)
 
-    # get_by :: bucket -> key -> [target_bucket] -> [MontageObject]
     def get_by(self, bucket, key, targets):
-        return self.get_by_(bucket=bucket, key=key, targets=targets)[1]
-
-    # returns ref key (as MontageObject) along with values
-    # get_by_ :: bucket -> key -> [target_bucket] -> (MontageObject, [MontageObject])
-    def get_by_(self, bucket, key, targets):
         req = proto.MontageGetReference(bucket=bucket, key=key)
         req.target_buckets.set(targets)
 
@@ -160,7 +147,6 @@ class MontageClient(object):
         resp = self._do_request(req, bucket, key)
         return (resp.master, self._get_subs(start, resp))
 
-    # delete :: bucket -> key -> ()
     def delete(self, bucket, key):
         req = proto.MontageDelete(bucket=bucket, key=key)
         resp = self._do_request(req, bucket, key)
@@ -168,12 +154,9 @@ class MontageClient(object):
         assert isinstance(resp, proto.MontageDeleteResponse), \
                'Delete should always get DeleteResponse back'
 
-    # put :: bucket -> key -> data -> (vclock) -> obj
     def put(self, bucket, key, data, vclock=None):
-        req = proto.MontagePut(object=self.newMontageObject(bucket=bucket,
-                                                      key=key,
-                                                      data=data,
-                                                      vclock=vclock))
+        obj = self.new_montage_object(bucket, key, data, vclock)
+        req = proto.MontagePut(object=obj)
         resp = self._do_request(req)
 
         if resp.modified:
@@ -181,7 +164,6 @@ class MontageClient(object):
         else:
             return None
 
-    # put_many :: [obj] -> [obj]
     def put_many(self, mos):
         req = proto.MontagePutMany()
         req.objects.set(mos)
@@ -225,7 +207,6 @@ class MontageClient(object):
 
         return id_to_packet[env.mtype](env.msg)
 
-# montage_pool :: string -> int -> (int) -> (int) -> pool
 def montage_pool(host, port, timeout=30, logger=default_logger, pool_size=5):
     return ConnectionPool(lambda: MontageClient(host, port,
                                                 timeout=timeout,

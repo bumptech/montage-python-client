@@ -16,7 +16,7 @@ def main():
     target2data = UserName(name="montage")
     target2 = cl.put('u-name', str(2), target2data.dumps())
 
-    (refObj, values) = cl.get_by_('u-info', str(1), ['u-event', 'u-name'])
+    (refObj, values) = cl.get_by('u-info', str(1), ['u-event', 'u-name'])
     assert UserInfo(refObj.data) == refdata, "reference key found did not match"
     assert len(values) == 2, "incorrect num values"
     assert values[0] is not None, "Could not retrieve u-event data, nothing found"

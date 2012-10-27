@@ -16,9 +16,6 @@ To setup montage itself, see github.com/bumptech/montage
 ===========
 Examples
 ===========
-To setup the examples execute::
-
-    cd examples && ./build_test_protos.sh
 
 You must have montage installed to run the basic proxy which the examples talk with.  In your montage/ directory::
 

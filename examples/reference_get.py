@@ -1,5 +1,5 @@
 from diesel import quickstart, quickstop
-from montage import MontageClient
+from montageclient import MontageClient
 from user_palm import UserEvent, UserName, UserInfo
 
 # run with montage/examples/basic_proxy.hs

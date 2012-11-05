@@ -1,2 +1,3 @@
 *_palm.py
 *.egg-info/
+*.pyc

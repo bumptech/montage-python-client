@@ -132,7 +132,7 @@ class MontageClient(object):
             req.gets.append(proto.MontageGet(bucket=b, key=k))
 
         start = time.time()
-        resp = self._do_request(req)
+        resp = self._do_request(req, '(multiple buckets)', '(multiple keys)')
 
         assert len(resp.status) == len(buckets_keys), \
             'You should receive as many status responses as you requested'
@@ -157,7 +157,7 @@ class MontageClient(object):
     def put(self, bucket, key, data, vclock=None):
         obj = self.new_montage_object(bucket, key, data, vclock)
         req = proto.MontagePut(object=obj)
-        resp = self._do_request(req)
+        resp = self._do_request(req, bucket, key)
 
         if resp.modified:
             return resp.object
@@ -167,7 +167,7 @@ class MontageClient(object):
     def put_many(self, mos):
         req = proto.MontagePutMany()
         req.objects.set(mos)
-        resp = self._do_request(req)
+        resp = self._do_request(req, '(multiple buckets)', '(multiple keys)')
         return [ r.object for r in resp.objects ]
 
     def command(self, command, argument):

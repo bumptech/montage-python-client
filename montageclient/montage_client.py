@@ -207,6 +207,12 @@ class MontageClient(object):
 
         return id_to_packet[env.mtype](env.msg)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 def montage_pool(host, port, timeout=30, logger=default_logger, pool_size=5):
     return ConnectionPool(lambda: MontageClient(host, port,
                                                 timeout=timeout,

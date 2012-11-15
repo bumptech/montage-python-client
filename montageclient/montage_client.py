@@ -26,7 +26,7 @@ id_to_packet = dict((v, k) for k, v in packet_to_id.iteritems())
 
 def default_logger(system, event, **kw):
     params = simplejson.dumps(kw)
-    sys.stderr.write("%s: %s timestamp=%f, params=%s" %
+    sys.stderr.write("%s: %s timestamp=%f, params=%s\n" %
                      (system, event, time.time(), params))
 
 class RiakException(Exception):

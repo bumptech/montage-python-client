@@ -44,10 +44,11 @@ class MontageRequestTimeout(Exception):
         return "%s (bucket=%r)" % (exception_msg, bucket)
 
 class MontageClient(object):
-    def __init__(self, host, port, timeout=30, logger=default_logger):
+    def __init__(self, host, port, timeout=30, logger=default_logger, stats=None):
         self._sock = DieselZMQSocket(zctx.socket(zmq.REQ), connect="tcp://%s:%d" % (host, port))
         self.timeout = timeout
         self.logger = logger
+        self.stats = stats
         self.is_closed = False
 
     def close(self):
@@ -177,6 +178,7 @@ class MontageClient(object):
         return resp
 
     def _do_request(self, req, bucket=None, key=None):
+        if self.stats: self.stats()
         try:
             return self.recv(self.send(req))
         except MontageRequestTimeout, e:
@@ -213,9 +215,11 @@ class MontageClient(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-def montage_pool(host, port, timeout=30, logger=default_logger, pool_size=5):
+def montage_pool(host, port, timeout=30, logger=default_logger,
+                 stats=None, pool_size=5):
     return ConnectionPool(lambda: MontageClient(host, port,
                                                 timeout=timeout,
-                                                logger=logger),
+                                                logger=logger,
+                                                stats=stats),
                           lambda conn: conn.close(),
                           pool_size=pool_size)

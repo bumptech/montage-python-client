@@ -77,12 +77,14 @@ class MontageClient(object):
                         key=result.key,
                         duration=duration,
                         length=len(result.data) if result else 0)
-        if result and len(result.data) > 2097152: # two megabytes
+        total_size = len(result.data) * result.get('fetch_resolutions', 1)
+        if result and total_size > 1048576: # one megabytes
             self.logger('DB', 'BIG_FETCH',
                         action='MONTAGE_GET',
                         bucket=result.bucket,
                         key=result.key,
                         duration=duration,
+                        total_size=total_size,
                         length=len(result.data))
         if result and result.fetch_resolutions__exists and result.fetch_resolutions > 10:
             self.logger('DB', 'MANY_SIBLINGS_FETCH',

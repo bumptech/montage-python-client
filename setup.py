@@ -8,7 +8,7 @@ def build_pb():
 
 build_pb()
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 setup(name="montageclient",
       version=VERSION,

@@ -5,7 +5,8 @@ import simplejson
 
 from diesel import first
 from diesel.util.pool import ConnectionPool
-from diesel.protocols.zeromq import DieselZMQSocket, zctx, zmq
+from diesel.protocols.nitro import DieselNitroSocket
+from pynitro import NitroFrame
 
 import montage_palm as proto
 
@@ -45,7 +46,7 @@ class MontageRequestTimeout(Exception):
 
 class MontageClient(object):
     def __init__(self, host, port, timeout=30, logger=default_logger, stats=None):
-        self._sock = DieselZMQSocket(zctx.socket(zmq.REQ), connect="tcp://%s:%d" % (host, port))
+        self._sock = DieselNitroSocket(connect="tcp://%s:%d" % (host, port))
         self.timeout = timeout
         self.logger = logger
         self.stats = stats
@@ -53,7 +54,7 @@ class MontageClient(object):
 
     def close(self):
         self.is_closed = True
-        self._sock.__exit__()
+        self._sock.destroy()
         self._sock = None
 
     @property
@@ -193,7 +194,7 @@ class MontageClient(object):
         out_pb = proto.MontageEnvelope(mtype=packet_to_id[type(req)],
                                msg=req.dumps(),
                                msgid=id.bytes)
-        self.sock.send(out_pb.dumps())
+        self.sock.send(NitroFrame(out_pb.dumps()))
         return id
 
     def recv(self, matchid=None):
@@ -202,7 +203,7 @@ class MontageClient(object):
             err = "Timed out after %.2f secs waiting for zmq frame"
             raise MontageRequestTimeout(err % self.timeout)
 
-        env = proto.MontageEnvelope(frame.bytes)
+        env = proto.MontageEnvelope(frame.data)
         if matchid:
             assert env.msgid == matchid.bytes, "request/response id pairs did not match!"
 

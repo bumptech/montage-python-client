@@ -17,7 +17,7 @@ setup(name="montageclient",
       packages=["montageclient"],
       install_requires=[
         "palm",
-        "diesel==0.3.21",
+        "diesel==3.0.21",
         "simplejson",
         "pynitro",
     ],

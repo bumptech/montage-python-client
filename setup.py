@@ -8,7 +8,7 @@ def build_pb():
 
 build_pb()
 
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 
 setup(name="montageclient",
       version=VERSION,
@@ -17,7 +17,7 @@ setup(name="montageclient",
       packages=["montageclient"],
       install_requires=[
         "palm",
-        "diesel==3.0.21",
+        "diesel>=3.0.21",
         "simplejson",
         "pynitro==0.3",
     ],
